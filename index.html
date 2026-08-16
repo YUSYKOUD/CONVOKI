@@ -379,7 +379,7 @@
         <section id="guestsSection" class="section">
           <div class="panel">
             <div class="panel-title">
-              <div><h2>👥 Lista de invitados</h2><p>Agrega nombre y número. WhatsApp enviará un enlace personal para aceptar o rechazar.</p></div>
+              <div><h2>👥 Lista de invitados</h2><p>Agrega nombre y número. Puedes enviar por WhatsApp o copiar el enlace personal para compartirlo por cualquier canal.</p></div>
             </div>
 
             <div class="guest-add">
@@ -403,7 +403,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>#</th><th>Nombre</th><th>WhatsApp</th><th>Asistencia</th><th>Invitación</th><th>Eliminar</th>
+                    <th>#</th><th>Nombre</th><th>WhatsApp</th><th>Asistencia</th><th>Enviar</th><th>Enlace</th><th>Eliminar</th>
                   </tr>
                 </thead>
                 <tbody id="guestTable"></tbody>
@@ -747,33 +747,33 @@ function invitationText(g){
   const e=data.event;
   const confirm=rsvpUrl(g);
 
-  let txt=`Hola ${g.name} 👋
+  const lines = [];
+  lines.push(`Hola ${g.name} 👋`);
+  lines.push("");
+  lines.push(`🎉 Te invito a *${e.title || "mi evento"}*`);
 
-Te invito a *${e.title || "mi evento"}* 🎉`;
-  if(e.date) txt+=`
-📅 ${formatDate(e.date).toLowerCase()}`;
-  if(e.time) txt+=`
-⏰ ${e.time} hrs`;
-  if(e.address) txt+=`
-📍 ${e.address}`;
-  if(e.note) txt+=`
+  if(e.date) lines.push(`📅 ${formatDate(e.date).toLowerCase()}`);
+  if(e.time) lines.push(`⏰ ${e.time} hrs`);
+  if(e.address) lines.push(`📍 ${e.address}`);
 
-${e.note}`;
-
-  if(confirm){
-    txt+=`
-
-*Abre tu invitación y confirma asistencia aquí* 👇
-${confirm}`;
-    txt+=`
-
-Desde ahí también podrás agregar el evento a tu calendario 📆`;
+  if(e.note){
+    lines.push("");
+    lines.push(e.note);
   }
 
-  txt+=`
+  if(confirm){
+    lines.push("");
+    lines.push("✅ *Confirma tu asistencia aquí:*");
+    lines.push(confirm);
+    lines.push("");
+    lines.push("📆 Desde la invitación también puedes agregar el evento a tu calendario.");
+  }
 
-Nos vemos 🙌`;
-  return txt;
+  lines.push("");
+  lines.push("¡Nos vemos! 🙌");
+
+  return lines.join("
+").normalize("NFC");
 }
 function feeText(g){
   const total=getFeeTotal();
@@ -798,11 +798,49 @@ function feeText(g){
   txt+=`\n\nCuando transfieras, avísame por acá 🙌`;
   return txt;
 }
+function encodeWhatsAppText(text){
+  // encodeURIComponent preserves emojis, accents and line breaks correctly in the wa.me URL.
+  return encodeURIComponent(String(text || "").normalize("NFC"));
+}
 function openWhatsApp(phone,text){
   const p=normalizePhone(phone);
   if(!p){toast("Número inválido.");return;}
-  window.open(`https://wa.me/${p}?text=${encodeURIComponent(text)}`,"_blank");
+  const encoded=encodeWhatsAppText(text);
+  window.open(`https://wa.me/${p}?text=${encoded}`,"_blank","noopener,noreferrer");
 }
+async function copyInviteLink(id){
+  const g=data.guests.find(x=>x.id===id); if(!g)return;
+  if(!g.token){g.token=uuid();save();}
+
+  const link=rsvpUrl(g);
+  if(!link){
+    toast("Publica CONVOKI en una URL web para copiar la invitación.");
+    return;
+  }
+
+  const ok=await syncGuestToCloud(g);
+  if(cloud && !ok){
+    toast("No se pudo sincronizar la invitación.");
+    return;
+  }
+
+  try{
+    await navigator.clipboard.writeText(link);
+    toast("Enlace de invitación copiado 🔗");
+  }catch(err){
+    const temp=document.createElement("textarea");
+    temp.value=link;
+    temp.setAttribute("readonly","");
+    temp.style.position="fixed";
+    temp.style.opacity="0";
+    document.body.appendChild(temp);
+    temp.select();
+    document.execCommand("copy");
+    temp.remove();
+    toast("Enlace de invitación copiado 🔗");
+  }
+}
+
 async function sendInvite(id){
   const g=data.guests.find(x=>x.id===id); if(!g)return;
   if(!g.token){g.token=uuid();save();}
@@ -841,6 +879,7 @@ function renderGuests(){
         </select>
       </td>
       <td><button class="wa" onclick="sendInvite(${g.id})">WhatsApp ↗</button></td>
+      <td><button class="btn btn-soft" style="padding:9px 11px;border-radius:11px" onclick="copyInviteLink(${g.id})">Copiar enlace 🔗</button></td>
       <td><button class="remove" onclick="removeGuest(${g.id})">×</button></td>`;
     tbody.appendChild(tr);
   });
