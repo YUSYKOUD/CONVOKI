@@ -3,5 +3,5 @@ window.CONVOKI_CONFIG = {
   SUPABASE_URL: "",
   SUPABASE_ANON_KEY: "",
   // Ejemplo: "https://convoki.vercel.app"
-  PUBLIC_BASE_URL: ""
+  PUBLIC_BASE_URL: "https://convoki.vercel.app"
 };
