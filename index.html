@@ -250,9 +250,9 @@
         <label>Correo</label>
         <input id="regEmail" class="input" type="email" placeholder="correo@ejemplo.cl">
       </div>
-      <button class="btn btn-primary btn-block" onclick="createProfile()">Crear perfil →</button>
+      <button type="button" class="btn btn-primary btn-block" onclick="createProfile()">Crear perfil →</button>
       <div id="existingProfile" class="hidden" style="margin-top:12px">
-        <button class="btn btn-soft btn-block" onclick="enterApp()">Entrar a mi perfil</button>
+        <button type="button" class="btn btn-soft btn-block" onclick="enterApp()">Entrar a mi perfil</button>
       </div>
     </section>
   </div>
@@ -602,13 +602,36 @@ async function cloudOwnerStatus(g,value){
 }
 
 function load(){
-  const saved = localStorage.getItem(STORAGE_KEY);
-  if(saved){
-    try{ data = {...data, ...JSON.parse(saved)}; }catch(e){}
+  try{
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if(saved){
+      const parsed=JSON.parse(saved);
+      if(parsed && typeof parsed==="object"){
+        data={
+          ...data,
+          ...parsed,
+          event:{...data.event,...(parsed.event||{})},
+          bank:{...data.bank,...(parsed.bank||{})},
+          guests:Array.isArray(parsed.guests)?parsed.guests:[],
+          feeItems:Array.isArray(parsed.feeItems)&&parsed.feeItems.length?parsed.feeItems:data.feeItems
+        };
+      }
+    }
+  }catch(e){
+    console.warn("CONVOKI: se ignoraron datos locales incompatibles",e);
+    try{localStorage.removeItem(STORAGE_KEY);}catch(_){}
   }
   if(data.profile) document.getElementById("existingProfile").classList.remove("hidden");
 }
-function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function save(){
+  try{
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    return true;
+  }catch(e){
+    console.warn("CONVOKI: no se pudo guardar localmente",e);
+    return false;
+  }
+}
 function toast(msg){
   const el=document.getElementById("toast");
   el.textContent=msg; el.classList.add("show");
@@ -618,21 +641,34 @@ function initials(name){
   return (name||"U").split(" ").filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase();
 }
 function createProfile(){
-  const name=document.getElementById("regName").value.trim();
-  const phone=document.getElementById("regPhone").value.trim();
-  const email=document.getElementById("regEmail").value.trim();
-  if(!name || !phone || !email){toast("Completa nombre, teléfono y correo.");return;}
-  data.profile={name,phone,email,ownerKey:uuid()}; save(); enterApp();
+  const name=(document.getElementById("regName")?.value||"").trim();
+  const phone=(document.getElementById("regPhone")?.value||"").trim();
+  const email=(document.getElementById("regEmail")?.value||"").trim();
+  if(!name || !phone || !email){
+    toast("Completa nombre, teléfono y correo.");
+    return;
+  }
+  data.profile={name,phone,email,ownerKey:uuid()};
+  const stored=save();
+  enterApp();
+  if(!stored){
+    setTimeout(()=>toast("Perfil creado. Tu navegador no permitió guardar datos locales."),250);
+  }
 }
 function enterApp(){
   if(!data.profile){toast("Primero crea tu perfil.");return;}
-  ensureOwnerKey();
+  try{ensureOwnerKey();}catch(e){console.warn(e);}
   document.getElementById("authView").classList.add("hidden");
   document.getElementById("appView").classList.remove("hidden");
-  hydrate();
-  syncAllGuests().then(syncStatuses);
+  try{
+    hydrate();
+  }catch(e){
+    console.error("CONVOKI: error al cargar el perfil",e);
+    toast("Perfil creado. Hubo un problema cargando algunos datos anteriores.");
+  }
+  Promise.resolve(syncAllGuests()).then(syncStatuses).catch(err=>console.warn("CONVOKI sync:",err));
   if(statusTimer) clearInterval(statusTimer);
-  statusTimer=setInterval(syncStatuses,10000);
+  statusTimer=setInterval(()=>syncStatuses().catch?.(()=>{}),10000);
 }
 function logout(){
   if(statusTimer){clearInterval(statusTimer);statusTimer=null;}
@@ -772,8 +808,7 @@ function invitationText(g){
   lines.push("");
   lines.push("¡Nos vemos! 🙌");
 
-  return lines.join("
-").normalize("NFC");
+  return lines.join("\n").normalize("NFC");
 }
 function feeText(g){
   const total=getFeeTotal();
@@ -975,5 +1010,6 @@ function saveEventSilently(){
 initCloud();
 load();
 </script>
+<!-- CONVOKI v3.2 profile-fix -->
 </body>
 </html>
