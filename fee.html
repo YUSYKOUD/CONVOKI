@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#7c3aed">
+<title>CONVOKI · Cuota</title>
+<style>
+:root{--bg:#09090b;--panel:#15151c;--line:#2b2b36;--text:#f8f8fb;--muted:#aaaaba;--purple:#8b5cf6;--pink:#ec4899;--green:#22c55e;--red:#ef4444}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--text);background:radial-gradient(circle at 10% 10%,rgba(139,92,246,.2),transparent 30%),radial-gradient(circle at 90% 15%,rgba(236,72,153,.17),transparent 28%),var(--bg)}
+.card{width:min(650px,100%);border:1px solid rgba(255,255,255,.08);border-radius:30px;background:rgba(21,21,28,.94);padding:30px;box-shadow:0 30px 100px rgba(0,0,0,.4)}
+.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:900;letter-spacing:-.04em}.dot{width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--pink))}
+.badge{display:inline-block;margin-top:34px;padding:8px 11px;border-radius:999px;background:rgba(139,92,246,.14);color:#d8b4fe;font-size:12px;font-weight:900}
+h1{font-size:clamp(38px,8vw,62px);line-height:.95;letter-spacing:-.06em;margin:12px 0 10px}.hello{color:var(--muted);margin-bottom:22px}
+.box{border:1px solid var(--line);border-radius:18px;background:#0d0d12;padding:18px;margin:14px 0}.row{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid #24242e}.row:last-child{border-bottom:0}.row span{color:#cfcfda}.row strong{text-align:right}
+.total{display:flex;justify-content:space-between;align-items:center;padding:20px;border-radius:18px;background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(236,72,153,.12));border:1px solid rgba(139,92,246,.3);margin:15px 0}.total strong{font-size:28px}
+.btn{width:100%;border:0;border-radius:15px;padding:15px;font-weight:900;font-size:15px;cursor:pointer}.paid{background:var(--green);color:#04140a;margin-top:12px}.state{margin-top:15px;padding:14px;border-radius:15px;background:#0d0d12;color:var(--muted);text-align:center}.hidden{display:none}.error{color:#fca5a5}.label{font-size:11px;color:var(--muted);font-weight:900;letter-spacing:.09em;text-transform:uppercase;margin-bottom:8px}
+@media(max-width:520px){.card{padding:23px}.row{flex-direction:column;gap:4px}.row strong{text-align:left}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand"><span class="dot"></span> CONVOKI</div>
+  <div id="loading" class="state">Cargando cobro…</div>
+  <div id="content" class="hidden">
+    <span class="badge">CUOTA DEL EVENTO 💸</span>
+    <h1 id="title">Evento</h1>
+    <div id="hello" class="hello"></div>
+
+    <div class="box">
+      <div class="label">Detalle</div>
+      <div id="items"></div>
+    </div>
+
+    <div class="total">
+      <span>Total por persona</span>
+      <strong id="total">$0</strong>
+    </div>
+
+    <div class="box">
+      <div class="label">Datos para transferir</div>
+      <div id="bank"></div>
+    </div>
+
+    <button id="paidBtn" class="btn paid" onclick="markPaid()">✅ Ya transferí</button>
+    <div id="state" class="state">Estado: <strong id="status">Pendiente</strong></div>
+  </div>
+  <div id="error" class="state error hidden"></div>
+</div>
+
+<script src="./config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+let client=null,payment=null;
+const token=new URLSearchParams(location.search).get("token");
+function money(n){return "$"+Number(n||0).toLocaleString("es-CL")}
+function showError(msg){
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("content").classList.add("hidden");
+  const e=document.getElementById("error");e.textContent=msg;e.classList.remove("hidden");
+}
+function addRow(parent,label,value){
+  if(!value)return;
+  const row=document.createElement("div");row.className="row";
+  const a=document.createElement("span");a.textContent=label;
+  const b=document.createElement("strong");b.textContent=value;
+  row.append(a,b);parent.appendChild(row);
+}
+async function loadPayment(){
+  const cfg=window.CONVOKI_CONFIG||{};
+  if(!token)return showError("Este enlace de cobro no es válido.");
+  if(!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY)return showError("CONVOKI todavía no tiene activada la sincronización online.");
+  client=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+  const {data,error}=await client.rpc("convoki_get_payment",{p_token:token});
+  if(error || !data || !data.length)return showError("No encontramos este cobro o ya no está disponible.");
+  payment=data[0];
+  document.getElementById("title").textContent=payment.event_title||"Evento CONVOKI";
+  document.getElementById("hello").textContent=`Hola ${payment.guest_name} 👋 Este enlace corresponde únicamente a tu cuota.`;
+
+  const items=document.getElementById("items");
+  const list=Array.isArray(payment.fee_items)?payment.fee_items:[];
+  if(!list.length){
+    addRow(items,"Cuota",money(payment.fee_total));
+  }else{
+    list.forEach(item=>addRow(items,item.name,money(item.value)));
+  }
+  document.getElementById("total").textContent=money(payment.fee_total);
+
+  const bank=document.getElementById("bank");
+  addRow(bank,"Titular",payment.bank_name);
+  addRow(bank,"RUT",payment.bank_rut);
+  addRow(bank,"Banco",payment.bank_bank);
+  addRow(bank,"Tipo de cuenta",payment.bank_type);
+  addRow(bank,"N° de cuenta",payment.bank_number);
+  addRow(bank,"Correo",payment.bank_email);
+
+  updateState(payment.status);
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("content").classList.remove("hidden");
+}
+function updateState(status){
+  document.getElementById("status").textContent=status;
+  const btn=document.getElementById("paidBtn");
+  if(status==="Pagado"){
+    document.getElementById("state").innerHTML="✅ <strong>Transferencia informada.</strong>";
+    btn.textContent="✅ Transferencia informada";
+    btn.disabled=true;
+    btn.style.opacity=".65";
+  }
+}
+async function markPaid(){
+  if(!client)return;
+  const {data,error}=await client.rpc("convoki_payment_respond",{p_token:token,p_status:"Pagado"});
+  if(error || !data)return showError("No pudimos registrar el pago. Intenta nuevamente.");
+  payment.status="Pagado";updateState("Pagado");
+}
+loadPayment();
+</script>
+</body>
+</html>
