@@ -454,12 +454,12 @@
 
           <div class="panel">
             <div class="panel-title">
-              <div><h2>Control de pagos</h2><p>Envía el cobro y marca manualmente quién ya transfirió.</p></div>
+              <div><h2>Control de pagos</h2><p>Envía el cobro, copia el enlace personalizado y elimina personas si necesitas corregir la lista.</p></div>
             </div>
             <div class="table-wrap">
               <table>
                 <thead>
-                  <tr><th>#</th><th>Nombre</th><th>WhatsApp</th><th>Pago</th><th>Cobro</th></tr>
+                  <tr><th>#</th><th>Nombre</th><th>WhatsApp</th><th>Pago</th><th>Cobro</th><th>Enlace</th><th>Eliminar</th></tr>
                 </thead>
                 <tbody id="paymentTable"></tbody>
               </table>
@@ -771,8 +771,14 @@ function addGuest(){
 }
 function removeGuest(id){
   const g=data.guests.find(x=>x.id===id);
-  data.guests=data.guests.filter(g=>g.id!==id); save(); renderAll();
+  if(!g) return;
+  const ok=window.confirm(`¿Eliminar a ${g.name} de la lista?`);
+  if(!ok) return;
+  data.guests=data.guests.filter(x=>x.id!==id);
+  save();
+  renderAll();
   cloudDeleteGuest(g);
+  toast(`${g.name} fue eliminado/a de la lista`);
 }
 function updateGuest(id,key,value){
   const g=data.guests.find(x=>x.id===id); if(!g)return;
@@ -861,7 +867,7 @@ async function copyInviteLink(id){
 
   try{
     await navigator.clipboard.writeText(link);
-    toast("Enlace de invitación copiado 🔗");
+    toast("Enlace copiado 🔗 Puedes enviarlo por cualquier canal.");
   }catch(err){
     const temp=document.createElement("textarea");
     temp.value=link;
@@ -872,7 +878,7 @@ async function copyInviteLink(id){
     temp.select();
     document.execCommand("copy");
     temp.remove();
-    toast("Enlace de invitación copiado 🔗");
+    toast("Enlace copiado 🔗 Puedes enviarlo por cualquier canal.");
   }
 }
 
@@ -973,7 +979,9 @@ function renderPayments(){
           <option ${g.paid==="Sí"?"selected":""}>Sí</option>
         </select>
       </td>
-      <td><button class="wa" onclick="sendFee(${g.id})">Enviar cobro ↗</button></td>`;
+      <td><button class="wa" onclick="sendFee(${g.id})">Enviar cobro ↗</button></td>
+      <td><button class="btn btn-soft" style="padding:9px 11px;border-radius:11px" onclick="copyInviteLink(${g.id})">Copiar enlace 🔗</button></td>
+      <td><button class="remove" title="Eliminar persona" onclick="removeGuest(${g.id})">×</button></td>`;
     tbody.appendChild(tr);
   });
   empty.classList.toggle("hidden",data.guests.length>0);
