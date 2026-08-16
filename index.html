@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#7c3aed" />
+  <title>CONVOKI — Invitaciones por WhatsApp</title>
+  <style>
+    :root{
+      --bg:#09090b;
+      --panel:#111117;
+      --panel2:#17171f;
+      --line:#2b2b36;
+      --text:#f7f7fb;
+      --muted:#a8a8b8;
+      --purple:#8b5cf6;
+      --pink:#ec4899;
+      --orange:#f97316;
+      --cyan:#22d3ee;
+      --green:#22c55e;
+      --red:#ef4444;
+      --yellow:#facc15;
+      --shadow:0 25px 80px rgba(0,0,0,.35);
+      --radius:24px;
+    }
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{
+      margin:0;
+      font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+      background:
+        radial-gradient(circle at 10% 10%, rgba(139,92,246,.18), transparent 30%),
+        radial-gradient(circle at 90% 10%, rgba(236,72,153,.16), transparent 28%),
+        radial-gradient(circle at 50% 95%, rgba(34,211,238,.12), transparent 28%),
+        var(--bg);
+      color:var(--text);
+      min-height:100vh;
+    }
+    button,input,textarea,select{font:inherit}
+    button{cursor:pointer}
+    .hidden{display:none!important}
+    .shell{max-width:1440px;margin:auto;padding:24px}
+    .brand{
+      display:flex;align-items:center;gap:12px;font-weight:900;letter-spacing:-.04em;
+      font-size:24px
+    }
+    .brand-dot{
+      width:16px;height:16px;border-radius:50%;
+      background:linear-gradient(135deg,var(--purple),var(--pink),var(--orange));
+      box-shadow:0 0 30px rgba(236,72,153,.6)
+    }
+    .topbar{
+      display:flex;justify-content:space-between;align-items:center;margin-bottom:24px
+    }
+    .pill{
+      border:1px solid var(--line);background:rgba(255,255,255,.04);
+      color:var(--muted);padding:9px 13px;border-radius:999px;font-size:13px
+    }
+    .auth{
+      min-height:100vh;display:grid;place-items:center;padding:24px
+    }
+    .auth-card{
+      width:min(980px,100%);display:grid;grid-template-columns:1.05fr .95fr;
+      overflow:hidden;border:1px solid rgba(255,255,255,.08);
+      border-radius:32px;background:rgba(17,17,23,.86);backdrop-filter:blur(18px);
+      box-shadow:var(--shadow)
+    }
+    .auth-hero{
+      min-height:650px;padding:48px;position:relative;overflow:hidden;
+      background:linear-gradient(145deg,#7c3aed 0%,#c026d3 45%,#f97316 100%)
+    }
+    .auth-hero:after{
+      content:"";position:absolute;width:380px;height:380px;border-radius:50%;
+      border:70px solid rgba(255,255,255,.1);right:-130px;bottom:-160px
+    }
+    .auth-hero h1{
+      font-size:clamp(48px,7vw,86px);line-height:.9;margin:90px 0 24px;
+      letter-spacing:-.075em;max-width:560px
+    }
+    .auth-hero p{font-size:18px;line-height:1.55;max-width:510px;color:rgba(255,255,255,.9)}
+    .mini-tags{display:flex;flex-wrap:wrap;gap:10px;margin-top:30px}
+    .mini-tags span{padding:9px 12px;border-radius:999px;background:rgba(0,0,0,.18);font-size:13px}
+    .auth-form{padding:48px;display:flex;flex-direction:column;justify-content:center}
+    .auth-form h2{font-size:34px;margin:0 0 8px;letter-spacing:-.04em}
+    .auth-form p{color:var(--muted);margin:0 0 28px}
+    .field{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+    .field label{font-size:13px;font-weight:700;color:#d7d7df}
+    .input, textarea, select{
+      width:100%;border:1px solid var(--line);background:#0d0d12;color:var(--text);
+      padding:14px 15px;border-radius:14px;outline:none;transition:.2s
+    }
+    .input:focus, textarea:focus, select:focus{border-color:var(--purple);box-shadow:0 0 0 3px rgba(139,92,246,.13)}
+    textarea{min-height:92px;resize:vertical}
+    .btn{
+      border:none;border-radius:14px;padding:13px 17px;font-weight:800;color:white;
+      display:inline-flex;align-items:center;justify-content:center;gap:9px;transition:.2s
+    }
+    .btn:hover{transform:translateY(-1px)}
+    .btn-primary{background:linear-gradient(135deg,var(--purple),var(--pink))}
+    .btn-green{background:#22c55e;color:#06150a}
+    .btn-soft{background:#1c1c24;border:1px solid var(--line)}
+    .btn-danger{background:rgba(239,68,68,.12);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
+    .btn-block{width:100%}
+    .app-grid{display:grid;grid-template-columns:240px 1fr;gap:24px}
+    .sidebar{
+      position:sticky;top:24px;height:calc(100vh - 48px);padding:18px;
+      border:1px solid rgba(255,255,255,.08);border-radius:24px;
+      background:rgba(17,17,23,.82);backdrop-filter:blur(18px)
+    }
+    .userbox{display:flex;gap:12px;align-items:center;padding:12px;margin:14px 0 22px;border-radius:18px;background:#0d0d12}
+    .avatar{
+      width:44px;height:44px;border-radius:14px;display:grid;place-items:center;
+      font-weight:900;background:linear-gradient(135deg,var(--purple),var(--pink))
+    }
+    .userbox strong{display:block;font-size:14px}
+    .userbox small{display:block;color:var(--muted);margin-top:2px;max-width:125px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .nav{display:flex;flex-direction:column;gap:7px}
+    .nav button{
+      border:none;background:transparent;color:var(--muted);padding:12px 13px;
+      border-radius:13px;text-align:left;font-weight:700
+    }
+    .nav button.active,.nav button:hover{background:#20202a;color:white}
+    .logout{position:absolute;left:18px;right:18px;bottom:18px}
+    .main{min-width:0}
+    .hero-card{
+      padding:34px;border-radius:28px;overflow:hidden;position:relative;
+      background:linear-gradient(115deg,#7c3aed,#c026d3 55%,#f97316);
+      box-shadow:var(--shadow);margin-bottom:24px
+    }
+    .hero-card:after{
+      content:"";position:absolute;width:280px;height:280px;border:55px solid rgba(255,255,255,.1);
+      border-radius:50%;right:-70px;top:-120px
+    }
+    .hero-card h1{font-size:clamp(34px,5vw,62px);line-height:.95;margin:0 0 13px;letter-spacing:-.065em;max-width:780px}
+    .hero-card p{max-width:650px;color:rgba(255,255,255,.86);font-size:17px;margin-bottom:24px}
+    .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+    .stat{
+      border:1px solid rgba(255,255,255,.07);background:rgba(17,17,23,.83);
+      border-radius:20px;padding:18px
+    }
+    .stat .k{font-size:12px;color:var(--muted);font-weight:700}
+    .stat .v{font-size:32px;font-weight:900;letter-spacing:-.05em;margin-top:6px}
+    .panel{
+      border:1px solid rgba(255,255,255,.08);background:rgba(17,17,23,.82);
+      border-radius:24px;padding:24px;margin-bottom:20px;box-shadow:0 15px 55px rgba(0,0,0,.15)
+    }
+    .panel-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .panel-title h2{font-size:22px;margin:0;letter-spacing:-.03em}
+    .panel-title p{margin:5px 0 0;color:var(--muted);font-size:13px}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .three{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
+    .upload{
+      border:1px dashed #484857;border-radius:18px;min-height:210px;display:grid;place-items:center;
+      background:#0d0d12;overflow:hidden;position:relative;text-align:center;padding:16px
+    }
+    .upload img{width:100%;height:100%;object-fit:cover;position:absolute;inset:0}
+    .upload .hint{position:relative;z-index:2;color:var(--muted)}
+    .upload.has-image .hint{background:rgba(0,0,0,.58);color:white;padding:8px 12px;border-radius:999px}
+    .event-preview{
+      min-height:210px;padding:25px;border-radius:20px;display:flex;flex-direction:column;justify-content:flex-end;
+      background:linear-gradient(145deg,rgba(139,92,246,.34),rgba(236,72,153,.27)),#17171f;
+      background-size:cover;background-position:center;position:relative;overflow:hidden
+    }
+    .event-preview:after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 20%,rgba(0,0,0,.85))}
+    .event-preview>*{position:relative;z-index:2}
+    .event-preview .date{font-size:12px;font-weight:900;text-transform:uppercase;letter-spacing:.12em;color:#f0abfc}
+    .event-preview h3{font-size:30px;margin:5px 0 6px;letter-spacing:-.04em}
+    .event-preview p{margin:2px 0;color:#ddd}
+    .guest-add{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+    .table-wrap{overflow:auto;border:1px solid var(--line);border-radius:16px}
+    table{width:100%;border-collapse:collapse;min-width:850px}
+    th,td{padding:13px 12px;text-align:left;border-bottom:1px solid #24242e;font-size:13px}
+    th{color:#a8a8b8;background:#0e0e13;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+    td:first-child,th:first-child{width:48px;text-align:center}
+    tr:last-child td{border-bottom:none}
+    .status{
+      border-radius:999px;padding:7px 10px;border:1px solid var(--line);background:#0d0d12;color:white
+    }
+    .wa{background:#25D366;color:#07190d;border:none;padding:9px 11px;border-radius:11px;font-weight:900}
+    .remove{border:none;background:transparent;color:#777;font-size:18px}
+    .remove:hover{color:#ef4444}
+    .fee-row{display:grid;grid-template-columns:1.4fr .6fr auto;gap:10px;margin-bottom:10px}
+    .fee-total{
+      margin-top:14px;padding:18px;border-radius:18px;
+      background:linear-gradient(135deg,rgba(139,92,246,.16),rgba(236,72,153,.12));
+      border:1px solid rgba(139,92,246,.28);display:flex;justify-content:space-between;align-items:center
+    }
+    .fee-total strong{font-size:25px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .note{
+      font-size:12px;color:var(--muted);line-height:1.5;margin-top:12px
+    }
+    .toast{
+      position:fixed;right:22px;bottom:22px;padding:13px 16px;border-radius:14px;
+      background:#f4f4f5;color:#09090b;font-weight:800;box-shadow:var(--shadow);
+      opacity:0;transform:translateY(12px);pointer-events:none;transition:.25s;z-index:50
+    }
+    .toast.show{opacity:1;transform:translateY(0)}
+    .empty{text-align:center;color:var(--muted);padding:26px}
+    .section{display:none}
+    .section.active{display:block}
+    .mobile-nav{display:none}
+    @media(max-width:1050px){
+      .cards{grid-template-columns:repeat(2,1fr)}
+      .app-grid{grid-template-columns:1fr}
+      .sidebar{display:none}
+      .mobile-nav{display:flex;gap:8px;overflow:auto;margin-bottom:18px}
+      .mobile-nav button{white-space:nowrap}
+      .auth-card{grid-template-columns:1fr}
+      .auth-hero{min-height:380px}
+      .auth-hero h1{margin-top:45px}
+    }
+    @media(max-width:700px){
+      .shell{padding:14px}
+      .two,.three,.guest-add{grid-template-columns:1fr}
+      .cards{grid-template-columns:1fr 1fr}
+      .auth-form,.auth-hero{padding:28px}
+      .hero-card{padding:26px}
+      .fee-row{grid-template-columns:1fr 120px auto}
+      .topbar .pill{display:none}
+    }
+  </style>
+</head>
+<body>
+
+<div id="authView" class="auth">
+  <div class="auth-card">
+    <section class="auth-hero">
+      <div class="brand"><span class="brand-dot"></span> CONVOKI</div>
+      <h1>TU JUNTA PARTE ACÁ.</h1>
+      <p>Crea el evento, arma tu lista, manda las invitaciones por WhatsApp y controla quién va, quién pagó y cuánto falta. Todo en un solo lugar.</p>
+      <div class="mini-tags">
+        <span>🎂 Cumpleaños</span>
+        <span>🍻 Juntas</span>
+        <span>🎉 Celebraciones</span>
+      </div>
+    </section>
+    <section class="auth-form">
+      <h2>Crea tu perfil</h2>
+      <p>Tu perfil se guarda en el navegador y las confirmaciones pueden sincronizarse online.</p>
+      <div class="field">
+        <label>Nombre completo</label>
+        <input id="regName" class="input" placeholder="Ej: Paulo Fuentealba">
+      </div>
+      <div class="field">
+        <label>Teléfono</label>
+        <input id="regPhone" class="input" inputmode="tel" placeholder="+56 9 1234 5678">
+      </div>
+      <div class="field">
+        <label>Correo</label>
+        <input id="regEmail" class="input" type="email" placeholder="correo@ejemplo.cl">
+      </div>
+      <button class="btn btn-primary btn-block" onclick="createProfile()">Crear perfil →</button>
+      <div id="existingProfile" class="hidden" style="margin-top:12px">
+        <button class="btn btn-soft btn-block" onclick="enterApp()">Entrar a mi perfil</button>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div id="appView" class="hidden">
+  <div class="shell">
+    <div class="topbar">
+      <div class="brand"><span class="brand-dot"></span> CONVOKI</div>
+      
+    </div>
+
+    <div class="mobile-nav">
+      <button class="btn btn-soft" onclick="showSection('home')">Inicio</button>
+      <button class="btn btn-soft" onclick="showSection('event')">Evento</button>
+      <button class="btn btn-soft" onclick="showSection('guests')">Invitados</button>
+      <button class="btn btn-soft" onclick="showSection('fees')">Cuotas</button>
+    </div>
+
+    <div class="app-grid">
+      <aside class="sidebar">
+        <div class="brand" style="font-size:18px"><span class="brand-dot"></span> Mi perfil</div>
+        <div class="userbox">
+          <div class="avatar" id="avatarInitials">PF</div>
+          <div><strong id="sidebarName">Usuario</strong><small id="sidebarEmail">correo</small></div>
+        </div>
+        <nav class="nav">
+          <button data-section="home" class="active" onclick="showSection('home')">🏠 Inicio</button>
+          <button data-section="event" onclick="showSection('event')">🎉 Mi evento</button>
+          <button data-section="guests" onclick="showSection('guests')">👥 Invitados</button>
+          <button data-section="fees" onclick="showSection('fees')">💸 Cuotas y pagos</button>
+        </nav>
+        <div class="logout">
+          <button class="btn btn-soft btn-block" onclick="logout()">Salir</button>
+        </div>
+      </aside>
+
+      <main class="main">
+        <section id="homeSection" class="section active">
+          <div class="hero-card">
+            <h1 id="welcomeGreeting">Hola, Paulo.</h1>
+            <h2 style="font-size:clamp(28px,4vw,48px);line-height:1;margin:0 0 13px;letter-spacing:-.05em;">Organiza sin perderte en el grupo.</h2>
+            <p>Crea tu invitación, envía mensajes personalizados por WhatsApp y lleva el control de respuestas y pagos.</p>
+            <button class="btn btn-green" onclick="showSection('event')">Crear / editar evento →</button>
+          </div>
+
+          <div class="cards">
+            <div class="stat"><div class="k">INVITADOS</div><div class="v" id="statGuests">0</div></div>
+            <div class="stat"><div class="k">CONFIRMADOS</div><div class="v" id="statAccepted">0</div></div>
+            <div class="stat"><div class="k">PAGARON</div><div class="v" id="statPaid">0</div></div>
+            <div class="stat"><div class="k">TOTAL CUOTA</div><div class="v" id="statFee">$0</div></div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">
+              <div><h2>Vista rápida</h2><p>Así se verá la información principal del evento.</p></div>
+            </div>
+            <div class="two">
+              <div id="homePreview" class="event-preview">
+                <span class="date" id="homeDate">SIN FECHA</span>
+                <h3 id="homeEventTitle">Tu próximo evento</h3>
+                <p id="homeTime">⏰ Hora por definir</p>
+                <p id="homeAddress">📍 Dirección por definir</p>
+              </div>
+              <div style="display:flex;flex-direction:column;justify-content:center;gap:12px">
+                <button class="btn btn-primary" onclick="showSection('guests')">Agregar invitados</button>
+                <button class="btn btn-soft" onclick="showSection('fees')">Configurar cuota</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section id="eventSection" class="section">
+          <div class="panel">
+            <div class="panel-title">
+              <div><h2>🎉 Tu evento</h2><p>Completa los datos que llegarán en la invitación.</p></div>
+              <button class="btn btn-primary" onclick="saveEvent()">Guardar evento</button>
+            </div>
+
+            <div class="two">
+              <div>
+                <div class="field">
+                  <label>Título del evento</label>
+                  <input id="eventTitle" class="input" placeholder="Ej: Cumple de Paulo">
+                </div>
+                <div class="two">
+                  <div class="field"><label>Fecha</label><input id="eventDate" class="input" type="date"></div>
+                  <div class="field"><label>Hora</label><input id="eventTime" class="input" type="time"></div>
+                </div>
+                <div class="field">
+                  <label>Dirección</label>
+                  <input id="eventAddress" class="input" placeholder="Ej: Av. Providencia 1234, Santiago">
+                </div>
+                <div class="field">
+                  <label>Mensaje adicional</label>
+                  <textarea id="eventNote" placeholder="Ej: Ven con ganas de pasarlo bien 🙌"></textarea>
+                </div>
+              </div>
+
+              <div>
+                <div class="field">
+                  <label>Foto / flyer del evento</label>
+                  <label id="uploadBox" class="upload">
+                    <input id="eventImage" type="file" accept="image/*" class="hidden" onchange="handleImage(event)">
+                    <img id="eventImagePreview" class="hidden" alt="Flyer">
+                    <div class="hint">📷 Toca para cargar una imagen<br><small>JPG, PNG o WEBP</small></div>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-title" style="margin-top:16px">
+              <div><h2 style="font-size:17px">Vista previa</h2></div>
+            </div>
+            <div id="eventPreview" class="event-preview">
+              <span class="date" id="previewDate">SIN FECHA</span>
+              <h3 id="previewTitle">Título del evento</h3>
+              <p id="previewTime">⏰ Hora por definir</p>
+              <p id="previewAddress">📍 Dirección por definir</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="guestsSection" class="section">
+          <div class="panel">
+            <div class="panel-title">
+              <div><h2>👥 Lista de invitados</h2><p>Agrega nombre y número. WhatsApp enviará un enlace personal para aceptar o rechazar.</p></div>
+            </div>
+
+            <div class="guest-add">
+              <div class="field" style="margin:0">
+                <label>Nombre</label>
+                <input id="guestName" class="input" placeholder="Ej: Camila">
+              </div>
+              <div class="field" style="margin:0">
+                <label>WhatsApp</label>
+                <input id="guestPhone" class="input" inputmode="tel" placeholder="+56 9 1234 5678">
+              </div>
+              <button class="btn btn-primary" onclick="addGuest()">+ Agregar</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">
+              <div><h2>Invitados</h2><p id="guestCounter">0 personas agregadas</p></div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th><th>Nombre</th><th>WhatsApp</th><th>Asistencia</th><th>Invitación</th><th>Eliminar</th>
+                  </tr>
+                </thead>
+                <tbody id="guestTable"></tbody>
+              </table>
+              <div id="guestEmpty" class="empty">Todavía no agregas invitados.</div>
+            </div>
+          </div>
+        </section>
+
+        <section id="feesSection" class="section">
+          <div class="panel">
+            <div class="panel-title">
+              <div><h2>💸 Cuota del evento</h2><p>Arma el desglose de gastos y calcula automáticamente el valor por persona.</p></div>
+            </div>
+
+            <div id="feeRows"></div>
+            <button class="btn btn-soft" onclick="addFeeItem()">+ Agregar ítem</button>
+
+            <div class="fee-total">
+              <div>
+                <div style="color:var(--muted);font-size:12px;font-weight:800">TOTAL POR PERSONA</div>
+                <strong id="feeTotal">$0</strong>
+              </div>
+              <div style="text-align:right">
+                <small style="color:var(--muted)">Suma de todos los ítems</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">
+              <div><h2>🏦 Datos para transferencia</h2><p>Se incluirán en el mensaje de cobro por WhatsApp.</p></div>
+              <button class="btn btn-primary" onclick="saveBank()">Guardar datos</button>
+            </div>
+            <div class="two">
+              <div>
+                <div class="field"><label>Nombre titular</label><input id="bankName" class="input" placeholder="Nombre completo"></div>
+                <div class="field"><label>RUT</label><input id="bankRut" class="input" placeholder="12.345.678-9"></div>
+                <div class="field"><label>Banco</label><input id="bankBank" class="input" placeholder="Banco"></div>
+              </div>
+              <div>
+                <div class="field"><label>Tipo de cuenta</label><input id="bankType" class="input" placeholder="Cuenta Corriente / Cuenta RUT"></div>
+                <div class="field"><label>Número de cuenta</label><input id="bankNumber" class="input" placeholder="123456789"></div>
+                <div class="field"><label>Correo</label><input id="bankEmail" class="input" type="email" placeholder="correo@ejemplo.cl"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-title">
+              <div><h2>Control de pagos</h2><p>Envía el cobro y marca manualmente quién ya transfirió.</p></div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>#</th><th>Nombre</th><th>WhatsApp</th><th>Pago</th><th>Cobro</th></tr>
+                </thead>
+                <tbody id="paymentTable"></tbody>
+              </table>
+              <div id="paymentEmpty" class="empty">Agrega invitados para comenzar a controlar los pagos.</div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="./config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const STORAGE_KEY = "convoki_app_v1";
+let data = {
+  profile:null,
+  event:{title:"",date:"",time:"",address:"",note:"",image:""},
+  guests:[],
+  feeItems:[{name:"Comida",value:0}],
+  bank:{name:"",rut:"",bank:"",type:"",number:"",email:""}
+};
+
+let cloud = null;
+let statusTimer = null;
+
+function uuid(){
+  if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
+  return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
+    const r=Math.random()*16|0, v=c==="x"?r:(r&0x3|0x8);
+    return v.toString(16);
+  });
+}
+function initCloud(){
+  const cfg=window.CONVOKI_CONFIG||{};
+  if(cfg.SUPABASE_URL && cfg.SUPABASE_ANON_KEY && window.supabase){
+    cloud=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+  }
+}
+function ensureOwnerKey(){
+  if(data.profile && !data.profile.ownerKey){
+    data.profile.ownerKey=uuid();
+    save();
+  }
+}
+function publicBaseUrl(){
+  const cfg=window.CONVOKI_CONFIG||{};
+  if(cfg.PUBLIC_BASE_URL) return cfg.PUBLIC_BASE_URL.replace(/\/$/,"");
+  if(location.protocol==="http:" || location.protocol==="https:"){
+    return location.href.split("/").slice(0,-1).join("/");
+  }
+  return "";
+}
+function compactCalendarDate(date,time){
+  if(!date || !time) return "";
+  return date.replaceAll("-","")+"T"+time.replace(":","")+"00";
+}
+function calendarUrl(){
+  const e=data.event;
+  if(!e.date || !e.time) return "";
+  const start=compactCalendarDate(e.date,e.time);
+  const d=new Date(`${e.date}T${e.time}:00`);
+  d.setHours(d.getHours()+2);
+  const pad=n=>String(n).padStart(2,"0");
+  const end=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  const params=new URLSearchParams({
+    action:"TEMPLATE",
+    text:e.title||"Evento CONVOKI",
+    dates:`${start}/${end}`,
+    details:e.note||"",
+    location:e.address||"",
+    ctz:"America/Santiago"
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
+function rsvpUrl(g){
+  const base=publicBaseUrl();
+  return base ? `${base}/rsvp.html?token=${encodeURIComponent(g.token)}` : "";
+}
+async function syncGuestToCloud(g){
+  if(!cloud || !data.profile) return false;
+  ensureOwnerKey();
+  try{
+    const {error}=await cloud.rpc("convoki_create_invite",{
+      p_token:g.token,
+      p_owner_key:data.profile.ownerKey,
+      p_guest_name:g.name,
+      p_phone:g.phone,
+      p_event_title:data.event.title||"",
+      p_event_date:data.event.date||null,
+      p_event_time:data.event.time||null,
+      p_event_address:data.event.address||"",
+      p_event_note:data.event.note||""
+    });
+    if(error) throw error;
+    return true;
+  }catch(err){
+    console.error("CONVOKI cloud sync:",err);
+    return false;
+  }
+}
+async function syncAllGuests(){
+  if(!cloud) return;
+  for(const g of data.guests) await syncGuestToCloud(g);
+}
+async function syncStatuses(){
+  if(!cloud || !data.profile?.ownerKey) return;
+  try{
+    const {data:rows,error}=await cloud.rpc("convoki_owner_statuses",{p_owner_key:data.profile.ownerKey});
+    if(error) throw error;
+    let changed=false;
+    (rows||[]).forEach(row=>{
+      const g=data.guests.find(x=>x.token===row.token);
+      if(g && g.status!==row.status){ g.status=row.status; changed=true; }
+    });
+    if(changed){save();renderGuests();renderStats();}
+  }catch(err){ console.error("CONVOKI status sync:",err); }
+}
+async function cloudDeleteGuest(g){
+  if(!cloud || !data.profile?.ownerKey || !g?.token) return;
+  try{
+    await cloud.rpc("convoki_delete_invite",{
+      p_owner_key:data.profile.ownerKey,
+      p_token:g.token
+    });
+  }catch(err){console.error(err);}
+}
+async function cloudOwnerStatus(g,value){
+  if(!cloud || !data.profile?.ownerKey || !g?.token) return;
+  try{
+    await cloud.rpc("convoki_owner_update_status",{
+      p_owner_key:data.profile.ownerKey,
+      p_token:g.token,
+      p_status:value
+    });
+  }catch(err){console.error(err);}
+}
+
+function load(){
+  const saved = localStorage.getItem(STORAGE_KEY);
+  if(saved){
+    try{ data = {...data, ...JSON.parse(saved)}; }catch(e){}
+  }
+  if(data.profile) document.getElementById("existingProfile").classList.remove("hidden");
+}
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function toast(msg){
+  const el=document.getElementById("toast");
+  el.textContent=msg; el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"),1800);
+}
+function initials(name){
+  return (name||"U").split(" ").filter(Boolean).slice(0,2).map(x=>x[0]).join("").toUpperCase();
+}
+function createProfile(){
+  const name=document.getElementById("regName").value.trim();
+  const phone=document.getElementById("regPhone").value.trim();
+  const email=document.getElementById("regEmail").value.trim();
+  if(!name || !phone || !email){toast("Completa nombre, teléfono y correo.");return;}
+  data.profile={name,phone,email,ownerKey:uuid()}; save(); enterApp();
+}
+function enterApp(){
+  if(!data.profile){toast("Primero crea tu perfil.");return;}
+  ensureOwnerKey();
+  document.getElementById("authView").classList.add("hidden");
+  document.getElementById("appView").classList.remove("hidden");
+  hydrate();
+  syncAllGuests().then(syncStatuses);
+  if(statusTimer) clearInterval(statusTimer);
+  statusTimer=setInterval(syncStatuses,10000);
+}
+function logout(){
+  if(statusTimer){clearInterval(statusTimer);statusTimer=null;}
+  document.getElementById("appView").classList.add("hidden");
+  document.getElementById("authView").classList.remove("hidden");
+  document.getElementById("existingProfile").classList.remove("hidden");
+}
+function showSection(name){
+  document.querySelectorAll(".section").forEach(s=>s.classList.remove("active"));
+  document.getElementById(name+"Section").classList.add("active");
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.section===name));
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+function hydrate(){
+  data.guests.forEach(g=>{if(!g.token) g.token=uuid();});
+  save();
+  const p=data.profile;
+  document.getElementById("sidebarName").textContent=p.name;
+  document.getElementById("sidebarEmail").textContent=p.email;
+  document.getElementById("avatarInitials").textContent=initials(p.name);
+  document.getElementById("welcomeGreeting").textContent=`Hola, ${p.name.split(" ")[0]}.`;
+
+  ["title","date","time","address","note"].forEach(k=>{
+    const el=document.getElementById("event"+k.charAt(0).toUpperCase()+k.slice(1));
+    if(el) el.value=data.event[k]||"";
+  });
+  if(data.event.image){
+    document.getElementById("eventImagePreview").src=data.event.image;
+    document.getElementById("eventImagePreview").classList.remove("hidden");
+    document.getElementById("uploadBox").classList.add("has-image");
+  }
+  Object.entries({
+    bankName:"name", bankRut:"rut", bankBank:"bank", bankType:"type", bankNumber:"number", bankEmail:"email"
+  }).forEach(([id,k])=>document.getElementById(id).value=data.bank[k]||"");
+  renderAll();
+}
+function formatDate(date){
+  if(!date) return "SIN FECHA";
+  const d=new Date(date+"T12:00:00");
+  return d.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"}).toUpperCase();
+}
+function formatMoney(n){ return "$"+Number(n||0).toLocaleString("es-CL"); }
+function normalizePhone(phone){
+  let p=(phone||"").replace(/[^\d]/g,"");
+  if(p.startsWith("0")) p=p.substring(1);
+  if(p.length===9 && p.startsWith("9")) p="56"+p;
+  return p;
+}
+function saveEvent(){
+  data.event={
+    ...data.event,
+    title:document.getElementById("eventTitle").value.trim(),
+    date:document.getElementById("eventDate").value,
+    time:document.getElementById("eventTime").value,
+    address:document.getElementById("eventAddress").value.trim(),
+    note:document.getElementById("eventNote").value.trim()
+  };
+  save(); renderEvent(); syncAllGuests(); toast("Evento guardado 🎉");
+}
+function handleImage(e){
+  const file=e.target.files[0]; if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    data.event.image=reader.result; save();
+    const img=document.getElementById("eventImagePreview");
+    img.src=reader.result; img.classList.remove("hidden");
+    document.getElementById("uploadBox").classList.add("has-image");
+    renderEvent();
+  };
+  reader.readAsDataURL(file);
+}
+function renderEvent(){
+  const e=data.event;
+  const fields=[
+    ["previewDate",formatDate(e.date)],["previewTitle",e.title||"Título del evento"],
+    ["previewTime","⏰ "+(e.time||"Hora por definir")],["previewAddress","📍 "+(e.address||"Dirección por definir")],
+    ["homeDate",formatDate(e.date)],["homeEventTitle",e.title||"Tu próximo evento"],
+    ["homeTime","⏰ "+(e.time||"Hora por definir")],["homeAddress","📍 "+(e.address||"Dirección por definir")]
+  ];
+  fields.forEach(([id,val])=>document.getElementById(id).textContent=val);
+  ["eventPreview","homePreview"].forEach(id=>{
+    const el=document.getElementById(id);
+    el.style.backgroundImage=e.image
+      ? `linear-gradient(transparent 20%,rgba(0,0,0,.86)), url("${e.image}")`
+      : "linear-gradient(145deg,rgba(139,92,246,.34),rgba(236,72,153,.27))";
+  });
+}
+function addGuest(){
+  const name=document.getElementById("guestName").value.trim();
+  const phone=document.getElementById("guestPhone").value.trim();
+  if(!name || !phone){toast("Agrega nombre y WhatsApp.");return;}
+  const guest={id:Date.now(),token:uuid(),name,phone,status:"Pendiente",paid:"No"};
+  data.guests.push(guest);
+  save();
+  syncGuestToCloud(guest);
+  document.getElementById("guestName").value="";
+  document.getElementById("guestPhone").value="";
+  renderGuests(); renderPayments(); renderStats();
+  toast("Invitado agregado 👥");
+}
+function removeGuest(id){
+  const g=data.guests.find(x=>x.id===id);
+  data.guests=data.guests.filter(g=>g.id!==id); save(); renderAll();
+  cloudDeleteGuest(g);
+}
+function updateGuest(id,key,value){
+  const g=data.guests.find(x=>x.id===id); if(!g)return;
+  g[key]=value; save(); renderStats(); renderPayments();
+  if(key==="status") cloudOwnerStatus(g,value);
+}
+function invitationText(g){
+  const e=data.event;
+  const confirm=rsvpUrl(g);
+
+  let txt=`Hola ${g.name} 👋
+
+Te invito a *${e.title || "mi evento"}* 🎉`;
+  if(e.date) txt+=`
+📅 ${formatDate(e.date).toLowerCase()}`;
+  if(e.time) txt+=`
+⏰ ${e.time} hrs`;
+  if(e.address) txt+=`
+📍 ${e.address}`;
+  if(e.note) txt+=`
+
+${e.note}`;
+
+  if(confirm){
+    txt+=`
+
+*Abre tu invitación y confirma asistencia aquí* 👇
+${confirm}`;
+    txt+=`
+
+Desde ahí también podrás agregar el evento a tu calendario 📆`;
+  }
+
+  txt+=`
+
+Nos vemos 🙌`;
+  return txt;
+}
+function feeText(g){
+  const total=getFeeTotal();
+  const e=data.event;
+  const items=data.feeItems.filter(i=>i.name && Number(i.value)>0);
+  let txt=`Hola ${g.name} 👋\n\nTe comparto la cuota de *${e.title || "nuestro evento"}* 💸\n`;
+  if(items.length){
+    txt+="\nDetalle:";
+    items.forEach(i=>txt+=`\n• ${i.name}: ${formatMoney(i.value)}`);
+  }
+  txt+=`\n\n*Total por persona: ${formatMoney(total)}*`;
+  const b=data.bank;
+  if(b.name||b.bank||b.number){
+    txt+=`\n\n🏦 *Datos para transferir*`;
+    if(b.name) txt+=`\nTitular: ${b.name}`;
+    if(b.rut) txt+=`\nRUT: ${b.rut}`;
+    if(b.bank) txt+=`\nBanco: ${b.bank}`;
+    if(b.type) txt+=`\nTipo: ${b.type}`;
+    if(b.number) txt+=`\nCuenta: ${b.number}`;
+    if(b.email) txt+=`\nCorreo: ${b.email}`;
+  }
+  txt+=`\n\nCuando transfieras, avísame por acá 🙌`;
+  return txt;
+}
+function openWhatsApp(phone,text){
+  const p=normalizePhone(phone);
+  if(!p){toast("Número inválido.");return;}
+  window.open(`https://wa.me/${p}?text=${encodeURIComponent(text)}`,"_blank");
+}
+async function sendInvite(id){
+  const g=data.guests.find(x=>x.id===id); if(!g)return;
+  if(!g.token){g.token=uuid();save();}
+  if(!publicBaseUrl()){
+    toast("Para compartir el enlace, publica CONVOKI en una URL web.");
+    return;
+  }
+  const ok=await syncGuestToCloud(g);
+  if(!cloud){
+    toast("Configura Supabase para activar respuestas automáticas.");
+  }else if(!ok){
+    toast("No se pudo sincronizar la invitación.");
+    return;
+  }
+  openWhatsApp(g.phone,invitationText(g));
+}
+function sendFee(id){
+  const g=data.guests.find(x=>x.id===id); if(!g)return;
+  openWhatsApp(g.phone,feeText(g));
+}
+function renderGuests(){
+  const tbody=document.getElementById("guestTable");
+  const empty=document.getElementById("guestEmpty");
+  tbody.innerHTML="";
+  data.guests.forEach((g,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td><strong>${escapeHtml(g.name)}</strong></td>
+      <td>${escapeHtml(g.phone)}</td>
+      <td>
+        <select class="status" onchange="updateGuest(${g.id},'status',this.value)">
+          <option ${g.status==="Pendiente"?"selected":""}>Pendiente</option>
+          <option ${g.status==="Acepta"?"selected":""}>Acepta</option>
+          <option ${g.status==="Rechaza"?"selected":""}>Rechaza</option>
+        </select>
+      </td>
+      <td><button class="wa" onclick="sendInvite(${g.id})">WhatsApp ↗</button></td>
+      <td><button class="remove" onclick="removeGuest(${g.id})">×</button></td>`;
+    tbody.appendChild(tr);
+  });
+  empty.classList.toggle("hidden",data.guests.length>0);
+  document.getElementById("guestCounter").textContent=`${data.guests.length} ${data.guests.length===1?"persona agregada":"personas agregadas"}`;
+}
+function addFeeItem(){
+  data.feeItems.push({name:"",value:0}); save(); renderFees();
+}
+function updateFee(index,key,value){
+  data.feeItems[index][key]=key==="value"?Number(value||0):value; save(); renderFeeTotal(); renderStats();
+}
+function removeFee(index){
+  data.feeItems.splice(index,1);
+  if(!data.feeItems.length) data.feeItems.push({name:"",value:0});
+  save(); renderFees(); renderStats();
+}
+function getFeeTotal(){ return data.feeItems.reduce((s,i)=>s+Number(i.value||0),0); }
+function renderFees(){
+  const box=document.getElementById("feeRows"); box.innerHTML="";
+  data.feeItems.forEach((item,i)=>{
+    const div=document.createElement("div"); div.className="fee-row";
+    div.innerHTML=`
+      <input class="input" placeholder="Ej: Comida" value="${escapeAttr(item.name)}" oninput="updateFee(${i},'name',this.value)">
+      <input class="input" type="number" min="0" step="100" placeholder="Valor" value="${Number(item.value||0)}" oninput="updateFee(${i},'value',this.value)">
+      <button class="btn btn-danger" onclick="removeFee(${i})">×</button>`;
+    box.appendChild(div);
+  });
+  renderFeeTotal();
+}
+function renderFeeTotal(){ document.getElementById("feeTotal").textContent=formatMoney(getFeeTotal()); }
+function saveBank(){
+  data.bank={
+    name:document.getElementById("bankName").value.trim(),
+    rut:document.getElementById("bankRut").value.trim(),
+    bank:document.getElementById("bankBank").value.trim(),
+    type:document.getElementById("bankType").value.trim(),
+    number:document.getElementById("bankNumber").value.trim(),
+    email:document.getElementById("bankEmail").value.trim()
+  };
+  save(); toast("Datos bancarios guardados 🏦");
+}
+function renderPayments(){
+  const tbody=document.getElementById("paymentTable");
+  const empty=document.getElementById("paymentEmpty");
+  tbody.innerHTML="";
+  data.guests.forEach((g,i)=>{
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td>${i+1}</td>
+      <td><strong>${escapeHtml(g.name)}</strong></td>
+      <td>${escapeHtml(g.phone)}</td>
+      <td>
+        <select class="status" onchange="updateGuest(${g.id},'paid',this.value)">
+          <option ${g.paid==="No"?"selected":""}>No</option>
+          <option ${g.paid==="Sí"?"selected":""}>Sí</option>
+        </select>
+      </td>
+      <td><button class="wa" onclick="sendFee(${g.id})">Enviar cobro ↗</button></td>`;
+    tbody.appendChild(tr);
+  });
+  empty.classList.toggle("hidden",data.guests.length>0);
+}
+function renderStats(){
+  const accepted=data.guests.filter(g=>g.status==="Acepta").length;
+  const paid=data.guests.filter(g=>g.paid==="Sí").length;
+  document.getElementById("statGuests").textContent=data.guests.length;
+  document.getElementById("statAccepted").textContent=accepted;
+  document.getElementById("statPaid").textContent=paid;
+  document.getElementById("statFee").textContent=formatMoney(getFeeTotal());
+}
+function escapeHtml(s){
+  return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+}
+function escapeAttr(s){return escapeHtml(s).replace(/"/g,"&quot;")}
+function renderAll(){renderEvent();renderGuests();renderFees();renderPayments();renderStats();}
+document.addEventListener("input",e=>{
+  if(["eventTitle","eventDate","eventTime","eventAddress","eventNote"].includes(e.target.id)){
+    saveEventSilently();
+  }
+});
+function saveEventSilently(){
+  data.event={
+    ...data.event,
+    title:document.getElementById("eventTitle").value.trim(),
+    date:document.getElementById("eventDate").value,
+    time:document.getElementById("eventTime").value,
+    address:document.getElementById("eventAddress").value.trim(),
+    note:document.getElementById("eventNote").value.trim()
+  };
+  save(); renderEvent();
+}
+initCloud();
+load();
+</script>
+</body>
+</html>

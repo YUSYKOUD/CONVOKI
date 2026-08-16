@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#7c3aed">
+<title>CONVOKI · Confirmar asistencia</title>
+<style>
+:root{--bg:#09090b;--panel:#15151c;--line:#2b2b36;--text:#f8f8fb;--muted:#aaaaba;--purple:#8b5cf6;--pink:#ec4899;--green:#22c55e;--red:#ef4444}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;padding:22px;font-family:Inter,system-ui,-apple-system,sans-serif;color:var(--text);background:radial-gradient(circle at 10% 10%,rgba(139,92,246,.2),transparent 30%),radial-gradient(circle at 90% 15%,rgba(236,72,153,.17),transparent 28%),var(--bg)}
+.card{width:min(620px,100%);border:1px solid rgba(255,255,255,.08);border-radius:30px;background:rgba(21,21,28,.92);padding:30px;box-shadow:0 30px 100px rgba(0,0,0,.4)}
+.brand{display:flex;align-items:center;gap:10px;font-size:20px;font-weight:900;letter-spacing:-.04em}.dot{width:14px;height:14px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--pink))}
+.badge{display:inline-block;margin-top:35px;padding:8px 11px;border-radius:999px;background:rgba(139,92,246,.14);color:#d8b4fe;font-size:12px;font-weight:900}
+h1{font-size:clamp(38px,8vw,66px);line-height:.95;letter-spacing:-.06em;margin:12px 0 18px}
+.info{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0;margin:18px 0}.info p{margin:9px 0;color:#dedee7}.note{color:var(--muted);line-height:1.55}
+.actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:22px}.btn{border:0;border-radius:15px;padding:15px;font-weight:900;font-size:15px;cursor:pointer}.yes{background:var(--green);color:#04140a}.no{background:rgba(239,68,68,.14);border:1px solid rgba(239,68,68,.28);color:#fecaca}.cal{width:100%;margin-top:10px;background:#24242e;color:white;border:1px solid var(--line)}
+.state{margin-top:18px;padding:14px;border-radius:15px;background:#0d0d12;color:var(--muted);text-align:center}.hidden{display:none}.error{color:#fca5a5}
+@media(max-width:520px){.card{padding:23px}.actions{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand"><span class="dot"></span> CONVOKI</div>
+  <div id="loading" class="state">Cargando invitación…</div>
+  <div id="content" class="hidden">
+    <span class="badge">ESTÁS INVITADO/A 🎉</span>
+    <h1 id="title">Evento</h1>
+    <div class="info">
+      <p id="guest"></p>
+      <p id="date"></p>
+      <p id="time"></p>
+      <p id="address"></p>
+    </div>
+    <p id="note" class="note"></p>
+    <div class="actions">
+      <button class="btn yes" onclick="respond('Acepta')">✅ Sí, voy</button>
+      <button class="btn no" onclick="respond('Rechaza')">❌ No puedo</button>
+    </div>
+    <button class="btn cal" onclick="addCalendar()">📆 Agregar al calendario</button>
+    <div id="state" class="state">Tu respuesta actual: <strong id="status">Pendiente</strong></div>
+  </div>
+  <div id="error" class="state error hidden"></div>
+</div>
+
+<script src="./config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+let client=null, invite=null;
+const token=new URLSearchParams(location.search).get("token");
+function fmtDate(v){
+  if(!v)return "";
+  const d=new Date(v+"T12:00:00");
+  return d.toLocaleDateString("es-CL",{weekday:"long",day:"numeric",month:"long",year:"numeric"});
+}
+function showError(msg){
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("content").classList.add("hidden");
+  const e=document.getElementById("error");e.textContent=msg;e.classList.remove("hidden");
+}
+async function loadInvite(){
+  const cfg=window.CONVOKI_CONFIG||{};
+  if(!token) return showError("Este enlace de invitación no es válido.");
+  if(!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) return showError("CONVOKI todavía no tiene activada la sincronización online.");
+  client=window.supabase.createClient(cfg.SUPABASE_URL,cfg.SUPABASE_ANON_KEY);
+  const {data,error}=await client.rpc("convoki_get_invite",{p_token:token});
+  if(error || !data || !data.length) return showError("No encontramos esta invitación o ya no está disponible.");
+  invite=data[0];
+  document.getElementById("title").textContent=invite.event_title||"Evento CONVOKI";
+  document.getElementById("guest").textContent=`👋 Invitación para ${invite.guest_name}`;
+  document.getElementById("date").textContent=invite.event_date?`📅 ${fmtDate(invite.event_date)}`:"";
+  document.getElementById("time").textContent=invite.event_time?`⏰ ${String(invite.event_time).slice(0,5)} hrs`:"";
+  document.getElementById("address").textContent=invite.event_address?`📍 ${invite.event_address}`:"";
+  document.getElementById("note").textContent=invite.event_note||"";
+  document.getElementById("status").textContent=invite.status;
+  document.getElementById("loading").classList.add("hidden");
+  document.getElementById("content").classList.remove("hidden");
+}
+async function respond(status){
+  if(!client)return;
+  const {data,error}=await client.rpc("convoki_respond",{p_token:token,p_status:status});
+  if(error || !data)return showError("No pudimos guardar tu respuesta. Intenta nuevamente.");
+  invite.status=status;
+  document.getElementById("status").textContent=status;
+  document.getElementById("state").innerHTML=status==="Acepta"
+    ?"✅ <strong>¡Listo! Confirmaste que vas.</strong>"
+    :"❌ <strong>Tu respuesta quedó registrada.</strong>";
+}
+function addCalendar(){
+  if(!invite?.event_date || !invite?.event_time)return alert("Este evento no tiene fecha y hora definidas.");
+  const start=invite.event_date.replaceAll("-","")+"T"+String(invite.event_time).slice(0,5).replace(":","")+"00";
+  const d=new Date(`${invite.event_date}T${String(invite.event_time).slice(0,5)}:00`);
+  d.setHours(d.getHours()+2);
+  const pad=n=>String(n).padStart(2,"0");
+  const end=`${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  const p=new URLSearchParams({
+    action:"TEMPLATE",text:invite.event_title||"Evento CONVOKI",
+    dates:`${start}/${end}`,details:invite.event_note||"",
+    location:invite.event_address||"",ctz:"America/Santiago"
+  });
+  window.open(`https://calendar.google.com/calendar/render?${p.toString()}`,"_blank");
+}
+loadInvite();
+</script>
+</body>
+</html>
